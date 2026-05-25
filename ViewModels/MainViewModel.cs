@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -22,6 +23,9 @@ public partial class MainViewModel : ObservableObject
     private readonly UpdateService _updateService;
     private readonly System.Timers.Timer _pollTimer;
     private readonly object _pollLock = new();
+
+    // Guards against overlapping PollStatusAsync executions (timer + async + weak lock was unsafe)
+    private readonly SemaphoreSlim _pollSemaphore = new(1, 1);
 
     private bool _isPolling;
     private int _consecutiveDownCount = 0;
@@ -221,6 +225,7 @@ public partial class MainViewModel : ObservableObject
                 IsStarting = false;
                 AppendLog("Gateway started successfully");
                 NotificationService.Show("OpenClaw Companion", "Gateway started successfully");
+                _gatewayService.ResetRestartAttempts(); // manual action replenishes auto-restart quota
                 StartPolling();
             }
             else
@@ -266,6 +271,7 @@ public partial class MainViewModel : ObservableObject
                 UpdateStatusDisplay();
                 AppendLog("Gateway stopped");
                 NotificationService.Show("OpenClaw Companion", "Gateway stopped");
+                _gatewayService.ResetRestartAttempts(); // manual stop resets auto-restart counter
             }
             else
             {
@@ -808,13 +814,24 @@ public partial class MainViewModel : ObservableObject
 
     public async Task PollStatusAsync()
     {
+        // Quick synchronous check (avoids unnecessary semaphore contention)
         lock (_pollLock)
         {
             if (!_isPolling) return;
         }
 
+        // Non-blocking acquire: skip this poll tick if a previous execution is still running.
+        // This eliminates the reentrancy risk from System.Timers.Timer + async lambda.
+        if (!await _pollSemaphore.WaitAsync(0))
+            return;
+
         try
         {
+            lock (_pollLock)
+            {
+                if (!_isPolling) return;
+            }
+
             var status = await _gatewayService.GetStatusAsync();
 
             var dispatcher = System.Windows.Application.Current?.Dispatcher;
@@ -877,10 +894,11 @@ public partial class MainViewModel : ObservableObject
                 }
             });
 
-            // Auto-restart outside of UI thread dispatcher
+            // Auto-restart outside of UI thread dispatcher.
+            // NOTE: ResetRestartAttempts removed from here — only manual Start/Stop replenish the quota
+            // (prevents defeating the max attempt limit on repeated deaths).
             if (needsAutoRestart)
             {
-                _gatewayService.ResetRestartAttempts();
                 var result = await _gatewayService.AutoRestartIfNeededAsync(AutoRestart);
                 if (result.Attempted && result.Success)
                 {
@@ -899,6 +917,10 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Logger.Error($"Poll error: {ex.Message}");
+        }
+        finally
+        {
+            _pollSemaphore.Release();
         }
     }
 

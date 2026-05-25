@@ -17,6 +17,128 @@ public class DiagnosticsService
         _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
     }
 
+    /// <summary>
+    /// Discovers full path to node.exe.
+    /// Prefers a persisted last-known-good path (if still valid on disk).
+    /// Checks common install locations, then falls back to "where node.exe" in PATH.
+    /// Returns null if not found (caller should fall back to bare "node" for PATH resolution).
+    /// </summary>
+    public static string? DiscoverNodeExecutable(string? preferred = null)
+    {
+        if (!string.IsNullOrWhiteSpace(preferred) && File.Exists(preferred))
+            return preferred;
+
+        var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var commonPaths = new[]
+        {
+            @"C:\Program Files\nodejs\node.exe",
+            @"C:\Program Files (x86)\nodejs\node.exe",
+            Path.Combine(userProfile, @"AppData\Local\Programs\nodejs\node.exe"),
+        };
+
+        foreach (var path in commonPaths)
+        {
+            if (File.Exists(path))
+                return path;
+        }
+
+        // Fallback to PATH lookup via where.exe (same pattern as diagnostics checks)
+        try
+        {
+            var psi = new ProcessStartInfo("where", "node.exe")
+            {
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            };
+
+            using var process = Process.Start(psi);
+            if (process != null)
+            {
+                var output = process.StandardOutput.ReadToEnd();
+                process.WaitForExit();
+                if (process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
+                {
+                    var paths = output.Trim().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var p in paths)
+                    {
+                        var trimmed = p.Trim();
+                        if (File.Exists(trimmed))
+                            return trimmed;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Ignore discovery errors; fall through to null
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Discovers full path to openclaw.mjs gateway script.
+    /// Prefers persisted last-known-good if valid.
+    /// Checks common global npm locations (matching DiagnosticsService.CheckOpenClawAccessibleAsync),
+    /// then falls back to "where openclaw.mjs".
+    /// </summary>
+    public static string? DiscoverOpenClawScript(string? preferred = null)
+    {
+        if (!string.IsNullOrWhiteSpace(preferred) && File.Exists(preferred))
+            return preferred;
+
+        var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var possiblePaths = new[]
+        {
+            Path.Combine(userProfile, @"AppData\Roaming\npm\node_modules\openclaw\openclaw.mjs"),
+            Path.Combine(userProfile, @"AppData\Local\npm\node_modules\openclaw\openclaw.mjs"),
+            @"C:\Program Files\nodejs\node_modules\openclaw\openclaw.mjs",
+        };
+
+        foreach (var path in possiblePaths)
+        {
+            if (File.Exists(path))
+                return path;
+        }
+
+        // Fallback to PATH via where (supports cases where npm global bin exposes it)
+        try
+        {
+            var psi = new ProcessStartInfo("where", "openclaw.mjs")
+            {
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            };
+
+            using var process = Process.Start(psi);
+            if (process != null)
+            {
+                var output = process.StandardOutput.ReadToEnd();
+                process.WaitForExit();
+                if (process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
+                {
+                    var paths = output.Trim().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var p in paths)
+                    {
+                        var trimmed = p.Trim();
+                        if (File.Exists(trimmed))
+                            return trimmed;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // best effort
+        }
+
+        return null;
+    }
+
     public async Task<List<DiagnosticsCheck>> RunChecksAsync(string gatewayHost, int gatewayPort)
     {
         var checks = new List<DiagnosticsCheck>();

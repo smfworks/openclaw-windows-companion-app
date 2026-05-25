@@ -60,6 +60,34 @@ public partial class App : System.Windows.Application
         var settings = _settingsService.Load();
         _gatewayService.UpdateEndpoint(settings.GatewayHost, settings.GatewayPort);
 
+        // Discover portable paths (reusing DiagnosticsService logic) and persist last-known-good.
+        // This runs after settings load so persisted values are preferred by service-level discovery.
+        try
+        {
+            var discoveredNode = DiagnosticsService.DiscoverNodeExecutable(settings.NodeExePath);
+            var discoveredScript = DiagnosticsService.DiscoverOpenClawScript(settings.OpenClawMjsPath);
+            bool updated = false;
+            if (!string.IsNullOrEmpty(discoveredNode) && discoveredNode != settings.NodeExePath)
+            {
+                settings.NodeExePath = discoveredNode;
+                updated = true;
+            }
+            if (!string.IsNullOrEmpty(discoveredScript) && discoveredScript != settings.OpenClawMjsPath)
+            {
+                settings.OpenClawMjsPath = discoveredScript;
+                updated = true;
+            }
+            if (updated)
+            {
+                _settingsService.Save(settings);
+                Logger.Info($"Persisted discovered paths — Node: {settings.NodeExePath}, OpenClaw: {settings.OpenClawMjsPath}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Path discovery at startup failed (non-fatal): {ex.Message}");
+        }
+
         // Create main window
         _mainWindow = new MainWindow
         {

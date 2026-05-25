@@ -9,4 +9,8 @@ public class AppSettings
     public bool AutoRestartGateway { get; set; } = true;
     public bool StartMinimized { get; set; } = true;
     public bool StartWithWindows { get; set; } = false;
+
+    // Persisted last-known-good paths for portable gateway/CLI execution (populated by discovery on startup)
+    public string? NodeExePath { get; set; }
+    public string? OpenClawMjsPath { get; set; }
 }
