@@ -27,3 +27,4 @@ C:\Users\Michael Gannotti\.openclaw\workspace\Projects\openclaw-companion-maui\o
 C:\Users\Michael Gannotti\.openclaw\workspace\Projects\openclaw-companion-maui\obj\Debug\net8.0-windows10.0.19041.0\OpenClawCompanion.pdb
 C:\Users\Michael Gannotti\.openclaw\workspace\Projects\openclaw-companion-maui\obj\Debug\net8.0-windows10.0.19041.0\OpenClawCompanion.genruntimeconfig.cache
 C:\Users\Michael Gannotti\.openclaw\workspace\Projects\openclaw-companion-maui\obj\Debug\net8.0-windows10.0.19041.0\ref\OpenClawCompanion.dll
+C:\Users\Michael Gannotti\.openclaw\workspace\Projects\openclaw-companion-maui\obj\Debug\net8.0-windows10.0.19041.0\OpenClawCompanion.sourcelink.json

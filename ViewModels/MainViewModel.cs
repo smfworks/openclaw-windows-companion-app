@@ -222,8 +222,10 @@ public partial class MainViewModel : ObservableObject
         {
             var status = await _gatewayService.GetStatusAsync();
 
-            // Ensure we are on the UI thread for property updates
-            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher == null) return;
+
+            await dispatcher.InvokeAsync(() =>
             {
                 if (status == GatewayStatus.Running)
                 {
