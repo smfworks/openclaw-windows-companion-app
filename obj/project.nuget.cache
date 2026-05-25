@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "dgSpecHash": "5BcUcd15Jko=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Michael Gannotti\\.openclaw\\workspace\\Projects\\openclaw-companion-maui\\OpenClawCompanion.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Michael Gannotti\\.nuget\\packages\\communitytoolkit.mvvm\\8.4.0\\communitytoolkit.mvvm.8.4.0.nupkg.sha512",
+    "C:\\Users\\Michael Gannotti\\.nuget\\packages\\system.codedom\\8.0.0\\system.codedom.8.0.0.nupkg.sha512",
+    "C:\\Users\\Michael Gannotti\\.nuget\\packages\\system.management\\8.0.0\\system.management.8.0.0.nupkg.sha512",
+    "C:\\Users\\Michael Gannotti\\.nuget\\packages\\microsoft.windows.sdk.net.ref\\10.0.19041.56\\microsoft.windows.sdk.net.ref.10.0.19041.56.nupkg.sha512"
+  ],
+  "logs": []
+}
