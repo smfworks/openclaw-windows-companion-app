@@ -14,6 +14,8 @@ public partial class MainViewModel : ObservableObject
     private readonly object _pollLock = new();
 
     private bool _isPolling;
+    private int _consecutiveDownCount = 0;
+    private const int ConsecutiveDownThreshold = 2;
 
     [ObservableProperty]
     private GatewayStatus _gatewayStatus = GatewayStatus.Stopped;
@@ -213,22 +215,34 @@ public partial class MainViewModel : ObservableObject
             // Ensure we are on the UI thread for property updates
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             {
-                if (status != GatewayStatus)
+                if (status == GatewayStatus.Running)
                 {
-                    var previousStatus = GatewayStatus;
-
-                    if (status == GatewayStatus.Running)
+                    _consecutiveDownCount = 0;
+                    if (GatewayStatus != GatewayStatus.Running)
                     {
                         GatewayStatus = GatewayStatus.Running;
                         IsRunning = true;
                         UpdateProcessInfo();
                         Logger.Info("Poll: Gateway is running");
+                        UpdateStatusDisplay();
+                        StatusChanged?.Invoke(GatewayStatus);
                     }
                     else
                     {
+                        UpdateProcessInfo();
+                    }
+                }
+                else
+                {
+                    _consecutiveDownCount++;
+                    if (_consecutiveDownCount >= ConsecutiveDownThreshold && GatewayStatus != GatewayStatus.Stopped)
+                    {
+                        var previousStatus = GatewayStatus;
                         GatewayStatus = GatewayStatus.Stopped;
                         IsRunning = false;
                         ClearProcessInfo();
+                        UpdateStatusDisplay();
+                        StatusChanged?.Invoke(GatewayStatus);
 
                         if (previousStatus == GatewayStatus.Running)
                         {
@@ -237,13 +251,10 @@ public partial class MainViewModel : ObservableObject
                             Logger.Warn("Gateway stopped unexpectedly (detected via poll)");
                         }
                     }
-
-                    UpdateStatusDisplay();
-                    StatusChanged?.Invoke(GatewayStatus);
-                }
-                else if (status == GatewayStatus.Running)
-                {
-                    UpdateProcessInfo();
+                    else if (_consecutiveDownCount < ConsecutiveDownThreshold)
+                    {
+                        Logger.Info($"Poll: Gateway check failed ({_consecutiveDownCount}/{ConsecutiveDownThreshold}) — waiting for confirmation");
+                    }
                 }
             });
         }
