@@ -225,7 +225,8 @@ public partial class MainViewModel : ObservableObject
             var dispatcher = System.Windows.Application.Current?.Dispatcher;
             if (dispatcher == null) return;
 
-            await dispatcher.InvokeAsync(() =>
+            // Ensure we are on the UI thread for property updates
+            dispatcher.Invoke(() =>
             {
                 if (status == GatewayStatus.Running)
                 {

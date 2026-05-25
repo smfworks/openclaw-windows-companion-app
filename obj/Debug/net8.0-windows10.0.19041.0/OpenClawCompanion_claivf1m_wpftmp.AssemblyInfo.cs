@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("OpenClawCompanion")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fd45348987269d1d98a9cf51590c959849db4dbe")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9d5dddb63ccaed32f4609bb0b7d8a280d4bfab67")]
 [assembly: System.Reflection.AssemblyProductAttribute("OpenClawCompanion")]
 [assembly: System.Reflection.AssemblyTitleAttribute("OpenClawCompanion")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -49,7 +49,7 @@ public class GatewayService
             return false;
         }
 
-        var psi = new ProcessStartInfo(_nodePath, $"\"{_gatewayPath}\" gateway start --port 18789")
+        var psi = new ProcessStartInfo(_nodePath, $"\"{_gatewayPath}\" gateway run --force --port 18789")
         {
             CreateNoWindow = true,
             WindowStyle = ProcessWindowStyle.Hidden,
