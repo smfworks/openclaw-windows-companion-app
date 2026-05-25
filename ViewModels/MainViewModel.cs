@@ -124,14 +124,24 @@ public partial class MainViewModel : ObservableObject
             AppendLog("Stopping gateway...");
             Logger.Info("Stop command issued");
 
-            await _gatewayService.StopAsync();
+            var stopped = await _gatewayService.StopAsync();
             StopPolling();
-            GatewayStatus = GatewayStatus.Stopped;
-            IsRunning = false;
-            ClearProcessInfo();
-            UpdateStatusDisplay();
-            AppendLog("Gateway stopped");
-            NotificationService.Show("OpenClaw Companion", "Gateway stopped");
+            if (stopped)
+            {
+                GatewayStatus = GatewayStatus.Stopped;
+                IsRunning = false;
+                ClearProcessInfo();
+                UpdateStatusDisplay();
+                AppendLog("Gateway stopped");
+                NotificationService.Show("OpenClaw Companion", "Gateway stopped");
+            }
+            else
+            {
+                GatewayStatus = GatewayStatus.Error;
+                UpdateStatusDisplay();
+                AppendLog("ERROR: Gateway stop failed — process may still be running");
+                NotificationService.Show("OpenClaw Companion", "Gateway stop failed — process may still be running");
+            }
         }
         catch (Exception ex)
         {

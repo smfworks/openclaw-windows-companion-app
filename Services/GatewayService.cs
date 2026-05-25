@@ -133,7 +133,7 @@ public class GatewayService
             }
         }
 
-        Logger.Warn("Gateway stop timed out");
+        Logger.Warn("Gateway stop timed out — process may still be running");
         return false;
     }
 
@@ -142,7 +142,7 @@ public class GatewayService
         try
         {
             var searcher = new ManagementObjectSearcher(
-                "SELECT ProcessId, CommandLine FROM Win32_Process WHERE Name=''node.exe'' AND CommandLine LIKE ''%openclaw%''");
+                "SELECT ProcessId, CommandLine FROM Win32_Process WHERE Name='node.exe' AND CommandLine LIKE '%openclaw%'");
 
             foreach (ManagementObject obj in searcher.Get())
             {
