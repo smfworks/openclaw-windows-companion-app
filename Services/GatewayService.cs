@@ -13,7 +13,7 @@ public class GatewayService
         BaseAddress = new Uri("http://localhost:18789")
     };
 
-    private readonly string _nodePath = @"C:\Program Files\node.exe";
+    private readonly string _nodePath = @"C:\Program Files\nodejs\node.exe";
     private readonly string _gatewayPath = @"C:\Users\Michael Gannotti\AppData\Roaming\npm\node_modules\openclaw\openclaw.mjs";
 
     private int? _gatewayPid;
