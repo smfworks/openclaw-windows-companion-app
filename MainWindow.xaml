@@ -25,7 +25,9 @@
             <RowDefinition Height="Auto"/>   <!-- Status panel -->
             <RowDefinition Height="Auto"/>   <!-- Process info -->
             <RowDefinition Height="Auto"/>   <!-- Controls -->
-            <RowDefinition Height="Auto"/>   <!-- Settings -->
+            <RowDefinition Height="Auto"/>   <!-- Settings toggle -->
+            <RowDefinition Height="Auto"/>   <!-- Settings panel (collapsible) -->
+            <RowDefinition Height="Auto"/>   <!-- Config editor panel (collapsible) -->
             <RowDefinition Height="*"/>      <!-- Log viewer -->
         </Grid.RowDefinitions>
 
@@ -33,10 +35,18 @@
         <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}"
                 Padding="16,10" CornerRadius="8,8,0,0">
             <Grid>
-                <TextBlock Text="OpenClaw Companion"
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="OpenClaw Companion"
                            FontSize="18" FontWeight="Bold"
                            Foreground="{StaticResource AccentBrush}"
                            VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Content="⚙ Settings"
+                        Style="{StaticResource DarkButton}"
+                        Command="{Binding ToggleSettingsCommand}"
+                        Padding="12,6" FontSize="12"/>
             </Grid>
         </Border>
 
@@ -109,36 +119,161 @@
             </StackPanel>
         </Border>
 
-        <!-- Settings -->
-        <Border Grid.Row="4" Background="{StaticResource SurfaceBrush}" Margin="0,1,0,0" Padding="16,10">
-            <StackPanel>
-                <TextBlock Text="Settings" FontSize="14" FontWeight="Bold"
-                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
-                <WrapPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
-                        <Label Content="Host:" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBox Text="{Binding GatewayHost, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="120"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
-                        <Label Content="Port:" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBox Text="{Binding GatewayPort, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="80"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
-                        <Label Content="Poll Interval (s):" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBox Text="{Binding PollIntervalSeconds, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="60"/>
-                    </StackPanel>
-                    <CheckBox Content="Auto-start on launch"
-                              IsChecked="{Binding AutoStart}"
-                              VerticalAlignment="Center"/>
-                </WrapPanel>
+        <!-- Settings Toggle / Mini Display -->
+        <Border Grid.Row="4" Background="{StaticResource SurfaceBrush}" Margin="0,1,0,0" Padding="16,8"
+                Visibility="{Binding IsSettingsVisible, Converter={StaticResource BoolInvertConverter}}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Current Config: " Foreground="{StaticResource ForegroundDimBrush}" FontSize="12" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding GatewayHost}" Foreground="{StaticResource ForegroundBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock Text=":" Foreground="{StaticResource ForegroundBrush}" FontSize="12" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding GatewayPort}" Foreground="{StaticResource ForegroundBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock Text="  •  Poll: " Foreground="{StaticResource ForegroundDimBrush}" FontSize="12" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding PollIntervalSeconds}" Foreground="{StaticResource ForegroundBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock Text="s  •  Auto-start: " Foreground="{StaticResource ForegroundDimBrush}" FontSize="12" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding AutoStart}" Foreground="{StaticResource ForegroundBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock Text="  •  Minimized: " Foreground="{StaticResource ForegroundDimBrush}" FontSize="12" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding StartMinimized}" Foreground="{StaticResource ForegroundBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock Text="  •  Windows startup: " Foreground="{StaticResource ForegroundDimBrush}" FontSize="12" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding StartWithWindows}" Foreground="{StaticResource ForegroundBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
             </StackPanel>
         </Border>
 
+        <!-- Settings Panel -->
+        <Border Grid.Row="5" Background="{StaticResource SurfaceBrush}" Margin="0,1,0,0" Padding="16,12"
+                Visibility="{Binding IsSettingsVisible}">
+            <StackPanel>
+                <TextBlock Text="Settings" FontSize="14" FontWeight="Bold"
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,12"/>
+                
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Gateway Host -->
+                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,12,10">
+                        <TextBlock Text="Gateway Host" Foreground="{StaticResource ForegroundDimBrush}" FontSize="12" Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding SettingsGatewayHost, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="8,6" FontSize="13"/>
+                    </StackPanel>
+
+                    <!-- Gateway Port -->
+                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,10">
+                        <TextBlock Text="Gateway Port" Foreground="{StaticResource ForegroundDimBrush}" FontSize="12" Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding SettingsGatewayPort, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="8,6" FontSize="13"/>
+                    </StackPanel>
+
+                    <!-- Poll Interval -->
+                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,10">
+                        <TextBlock Text="Poll Interval (seconds)" Foreground="{StaticResource ForegroundDimBrush}" FontSize="12" Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding SettingsPollIntervalSeconds, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="8,6" FontSize="13"/>
+                        <TextBlock Text="Min 5, max 300" Foreground="{StaticResource ForegroundDimBrush}" FontSize="10" Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <!-- Auto-start Gateway -->
+                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,10">
+                        <TextBlock Text="Auto-start Gateway" Foreground="{StaticResource ForegroundDimBrush}" FontSize="12" Margin="0,0,0,4"/>
+                        <CheckBox Content="Start gateway automatically on app launch"
+                                  IsChecked="{Binding SettingsAutoStart}"
+                                  Foreground="{StaticResource ForegroundBrush}"
+                                  FontSize="13"
+                                  VerticalAlignment="Center"
+                                  Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <!-- Start Minimized -->
+                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,12,10">
+                        <TextBlock Text="Start Minimized" Foreground="{StaticResource ForegroundDimBrush}" FontSize="12" Margin="0,0,0,4"/>
+                        <CheckBox Content="Start app minimized to system tray"
+                                  IsChecked="{Binding SettingsStartMinimized}"
+                                  Foreground="{StaticResource ForegroundBrush}"
+                                  FontSize="13"
+                                  VerticalAlignment="Center"
+                                  Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <!-- Start with Windows -->
+                    <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,10">
+                        <TextBlock Text="Start with Windows" Foreground="{StaticResource ForegroundDimBrush}" FontSize="12" Margin="0,0,0,4"/>
+                        <CheckBox Content="Launch app when Windows starts"
+                                  IsChecked="{Binding SettingsStartWithWindows}"
+                                  Foreground="{StaticResource ForegroundBrush}"
+                                  FontSize="13"
+                                  VerticalAlignment="Center"
+                                  Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <!-- Buttons -->
+                    <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                                Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                        <Button Content="OpenClaw Config"
+                                Style="{StaticResource DarkButton}"
+                                Command="{Binding OpenConfigEditorCommand}"
+                                Width="130" Margin="0,0,10,0"/>
+                        <Button Content="Cancel"
+                                Style="{StaticResource DarkButton}"
+                                Command="{Binding CancelSettingsCommand}"
+                                Width="100" Margin="0,0,10,0"/>
+                        <Button Content="Save"
+                                Style="{StaticResource GreenAccentButton}"
+                                Command="{Binding SaveSettingsCommand}"
+                                Width="100"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- Config Editor Panel -->
+        <Border Grid.Row="6" Background="{StaticResource SurfaceBrush}" Margin="0,1,0,0" Padding="16,12"
+                Visibility="{Binding IsConfigEditorVisible}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="OpenClaw Configuration" FontSize="14" FontWeight="Bold"
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="1" Text="{Binding ConfigFilePath}" FontSize="11"
+                           Foreground="{StaticResource ForegroundDimBrush}" Margin="0,0,0,8"
+                           TextWrapping="Wrap"/>
+
+                <ScrollViewer Grid.Row="2" Style="{StaticResource LogScrollViewer}"
+                              VerticalScrollBarVisibility="Auto" MaxHeight="300">
+                    <TextBox Text="{Binding ConfigJsonText, Mode=OneWay}"
+                             IsReadOnly="True"
+                             Background="#FF181825"
+                             Foreground="#FFBAC2DE"
+                             FontFamily="Consolas"
+                             FontSize="12"
+                             BorderThickness="0"
+                             TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"
+                             HorizontalScrollBarVisibility="Auto"
+                             Padding="12,8"
+                             AcceptsReturn="True"/>
+                </ScrollViewer>
+
+                <Button Grid.Row="0" Content="Close"
+                        Style="{StaticResource DarkButton}"
+                        Command="{Binding CloseConfigEditorCommand}"
+                        Width="80" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+            </Grid>
+        </Border>
+
         <!-- Log Viewer -->
-        <Border Grid.Row="5" Margin="0,1,0,0" Background="{StaticResource SurfaceBrush}" Padding="0">
+        <Border Grid.Row="7" Margin="0,1,0,0" Background="{StaticResource SurfaceBrush}" Padding="0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>

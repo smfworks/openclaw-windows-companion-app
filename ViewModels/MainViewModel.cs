@@ -1,7 +1,10 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Win32;
 using OpenClawCompanion.Models;
 using OpenClawCompanion.Services;
 
@@ -10,6 +13,7 @@ namespace OpenClawCompanion.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     private readonly GatewayService _gatewayService;
+    private readonly SettingsService _settingsService;
     private readonly System.Timers.Timer _pollTimer;
     private readonly object _pollLock = new();
 
@@ -47,6 +51,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _logText = string.Empty;
 
+    // Settings backing fields
     [ObservableProperty]
     private string _gatewayHost = "localhost";
 
@@ -59,18 +64,80 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private int _pollIntervalSeconds = 10;
 
+    [ObservableProperty]
+    private bool _startMinimized = true;
+
+    [ObservableProperty]
+    private bool _startWithWindows = false;
+
+    // Settings panel state
+    [ObservableProperty]
+    private bool _isSettingsVisible;
+
+    // Config editor state
+    [ObservableProperty]
+    private bool _isConfigEditorVisible;
+
+    [ObservableProperty]
+    private string _configJsonText = string.Empty;
+
+    [ObservableProperty]
+    private string _configFilePath = string.Empty;
+
+    // Editable settings (separate from live settings until saved)
+    [ObservableProperty]
+    private string _settingsGatewayHost = "localhost";
+
+    [ObservableProperty]
+    private string _settingsGatewayPort = "18789";
+
+    [ObservableProperty]
+    private int _settingsPollIntervalSeconds = 10;
+
+    [ObservableProperty]
+    private bool _settingsAutoStart;
+
+    [ObservableProperty]
+    private bool _settingsStartMinimized = true;
+
+    [ObservableProperty]
+    private bool _settingsStartWithWindows;
+
     public ObservableCollection<string> LogEntries { get; } = new();
 
     public event Action<GatewayStatus>? StatusChanged;
     public event Action? ShowWindowRequested;
 
-    public MainViewModel(GatewayService gatewayService)
+    public MainViewModel(GatewayService gatewayService, SettingsService settingsService)
     {
         _gatewayService = gatewayService;
+        _settingsService = settingsService;
+
+        // Load persisted settings
+        LoadSettings();
 
         _pollTimer = new System.Timers.Timer(PollIntervalSeconds * 1000);
         _pollTimer.Elapsed += async (_, _) => await PollStatusAsync();
         _pollTimer.AutoReset = true;
+    }
+
+    private void LoadSettings()
+    {
+        var settings = _settingsService.Load();
+        GatewayHost = settings.GatewayHost;
+        GatewayPort = settings.GatewayPort.ToString();
+        PollIntervalSeconds = settings.PollIntervalSeconds;
+        AutoStart = settings.AutoStartGateway;
+        StartMinimized = settings.StartMinimized;
+        StartWithWindows = settings.StartWithWindows;
+
+        // Initialize editable settings
+        SettingsGatewayHost = GatewayHost;
+        SettingsGatewayPort = GatewayPort;
+        SettingsPollIntervalSeconds = PollIntervalSeconds;
+        SettingsAutoStart = AutoStart;
+        SettingsStartMinimized = StartMinimized;
+        SettingsStartWithWindows = StartWithWindows;
     }
 
     [RelayCommand]
@@ -186,6 +253,168 @@ public partial class MainViewModel : ObservableObject
     private void ToggleWindow()
     {
         ShowWindowRequested?.Invoke();
+    }
+
+    [RelayCommand]
+    private void ToggleSettings()
+    {
+        if (!IsSettingsVisible)
+        {
+            // Copy current live settings into editable fields
+            SettingsGatewayHost = GatewayHost;
+            SettingsGatewayPort = GatewayPort;
+            SettingsPollIntervalSeconds = PollIntervalSeconds;
+            SettingsAutoStart = AutoStart;
+            SettingsStartMinimized = StartMinimized;
+            SettingsStartWithWindows = StartWithWindows;
+        }
+        IsSettingsVisible = !IsSettingsVisible;
+    }
+
+    [RelayCommand]
+    private void SaveSettings()
+    {
+        // Validate port
+        if (!int.TryParse(SettingsGatewayPort, out var port) || port < 1 || port > 65535)
+        {
+            AppendLog("ERROR: Invalid port number. Must be 1-65535.");
+            return;
+        }
+
+        // Validate poll interval
+        var interval = SettingsPollIntervalSeconds;
+        if (interval < 5) interval = 5;
+        if (interval > 300) interval = 300;
+
+        // Update live settings
+        GatewayHost = SettingsGatewayHost;
+        GatewayPort = SettingsGatewayPort;
+        PollIntervalSeconds = interval;
+        AutoStart = SettingsAutoStart;
+        StartMinimized = SettingsStartMinimized;
+
+        // Handle StartWithWindows registry change
+        if (SettingsStartWithWindows != StartWithWindows)
+        {
+            StartWithWindows = SettingsStartWithWindows;
+            UpdateWindowsStartupRegistry(StartWithWindows);
+        }
+
+        // Persist
+        var settings = new AppSettings
+        {
+            GatewayHost = GatewayHost,
+            GatewayPort = port,
+            PollIntervalSeconds = PollIntervalSeconds,
+            AutoStartGateway = AutoStart,
+            StartMinimized = StartMinimized,
+            StartWithWindows = StartWithWindows
+        };
+        _settingsService.Save(settings);
+
+        // Apply to services
+        _gatewayService.UpdateEndpoint(GatewayHost, port);
+
+        // Restart timer if running
+        if (_isPolling)
+        {
+            _pollTimer.Interval = PollIntervalSeconds * 1000;
+        }
+
+        AppendLog($"Settings saved — Host: {GatewayHost}, Port: {port}, Poll: {PollIntervalSeconds}s, AutoStart: {AutoStart}, StartMinimized: {StartMinimized}, StartWithWindows: {StartWithWindows}");
+        Logger.Info($"Settings updated: {GatewayHost}:{port}, interval={PollIntervalSeconds}s, autoStart={AutoStart}, startMinimized={StartMinimized}, startWithWindows={StartWithWindows}");
+
+        IsSettingsVisible = false;
+    }
+
+    [RelayCommand]
+    private void CancelSettings()
+    {
+        // Discard changes — editable fields are already separate, just hide
+        IsSettingsVisible = false;
+    }
+
+    [RelayCommand]
+    private void OpenConfigEditor()
+    {
+        try
+        {
+            var configPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".openclaw",
+                "openclaw.json");
+
+            ConfigFilePath = configPath;
+
+            if (File.Exists(configPath))
+            {
+                var json = File.ReadAllText(configPath);
+                try
+                {
+                    var doc = JsonDocument.Parse(json);
+                    ConfigJsonText = JsonSerializer.Serialize(doc, new JsonSerializerOptions { WriteIndented = true });
+                }
+                catch
+                {
+                    ConfigJsonText = json;
+                }
+            }
+            else
+            {
+                ConfigJsonText = $"Configuration file not found.{Environment.NewLine}{Environment.NewLine}Expected path:{Environment.NewLine}{configPath}";
+            }
+
+            IsConfigEditorVisible = true;
+            IsSettingsVisible = false;
+        }
+        catch (Exception ex)
+        {
+            ConfigJsonText = $"Error reading configuration file:{Environment.NewLine}{ex.Message}";
+            IsConfigEditorVisible = true;
+        }
+    }
+
+    [RelayCommand]
+    private void CloseConfigEditor()
+    {
+        IsConfigEditorVisible = false;
+    }
+
+    private void UpdateWindowsStartupRegistry(bool enabled)
+    {
+        const string runKeyPath = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+        const string appName = "OpenClawCompanion";
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(runKeyPath, true);
+            if (key != null)
+            {
+                if (enabled)
+                {
+                    var exePath = Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
+                    if (!string.IsNullOrEmpty(exePath))
+                    {
+                        key.SetValue(appName, exePath);
+                        AppendLog("Start with Windows enabled");
+                        Logger.Info("Registry Run key added for auto-start");
+                    }
+                }
+                else
+                {
+                    if (key.GetValue(appName) != null)
+                    {
+                        key.DeleteValue(appName);
+                        AppendLog("Start with Windows disabled");
+                        Logger.Info("Registry Run key removed");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"ERROR: Failed to update startup registry: {ex.Message}");
+            Logger.Error($"Registry update failed: {ex}");
+        }
     }
 
     public void StartPolling()

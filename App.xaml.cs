@@ -12,7 +12,9 @@ public partial class App : System.Windows.Application
     private static Mutex? _mutex;
     private TrayIconService? _trayIconService;
     private GatewayService? _gatewayService;
+    private SettingsService? _settingsService;
     private MainViewModel? _viewModel;
+    private MainWindow? _mainWindow;
 
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
@@ -49,21 +51,26 @@ public partial class App : System.Windows.Application
         Logger.Info("=== OpenClaw Companion starting ===");
 
         // Initialize services
+        _settingsService = new SettingsService();
         _gatewayService = new GatewayService();
-        _viewModel = new MainViewModel(_gatewayService);
+        _viewModel = new MainViewModel(_gatewayService, _settingsService);
         _trayIconService = new TrayIconService(_gatewayService);
 
-        // Create and show main window
-        var mainWindow = new MainWindow
+        // Apply persisted settings to gateway service
+        var settings = _settingsService.Load();
+        _gatewayService.UpdateEndpoint(settings.GatewayHost, settings.GatewayPort);
+
+        // Create main window
+        _mainWindow = new MainWindow
         {
             DataContext = _viewModel
         };
 
         // Wire up tray icon
-        _trayIconService.Initialize(mainWindow);
-        _trayIconService.StartGatewayRequested += () => mainWindow.Dispatcher.Invoke(async () => await _viewModel.StartGatewayCommand.ExecuteAsync(null));
-        _trayIconService.StopGatewayRequested += () => mainWindow.Dispatcher.Invoke(async () => await _viewModel.StopGatewayCommand.ExecuteAsync(null));
-        _trayIconService.RestartGatewayRequested += () => mainWindow.Dispatcher.Invoke(async () => await _viewModel.RestartGatewayCommand.ExecuteAsync(null));
+        _trayIconService.Initialize(_mainWindow);
+        _trayIconService.StartGatewayRequested += () => _mainWindow.Dispatcher.Invoke(async () => await _viewModel.StartGatewayCommand.ExecuteAsync(null));
+        _trayIconService.StopGatewayRequested += () => _mainWindow.Dispatcher.Invoke(async () => await _viewModel.StopGatewayCommand.ExecuteAsync(null));
+        _trayIconService.RestartGatewayRequested += () => _mainWindow.Dispatcher.Invoke(async () => await _viewModel.RestartGatewayCommand.ExecuteAsync(null));
         _trayIconService.ExitRequested += () => ShutdownApplication();
         _trayIconService.ShowRequested += () => _trayIconService.ShowWindow();
 
@@ -75,18 +82,20 @@ public partial class App : System.Windows.Application
         };
         _viewModel.ShowWindowRequested += () => _trayIconService.ShowWindow();
 
-        // Prevent window close from shutting down app
-        mainWindow.Closing += (_, args) =>
+        // Handle startup visibility based on StartMinimized setting
+        if (settings.StartMinimized)
         {
-            args.Cancel = true;
-            mainWindow.Hide();
-            Logger.Info("Window minimized to tray");
-        };
+            // Don't show the window — keep it hidden in tray
+            Logger.Info("Starting minimized to tray");
+        }
+        else
+        {
+            // Show window normally on startup
+            _mainWindow.Show();
+            Logger.Info("Window shown on startup");
+        }
 
-        // Show window on startup
-        mainWindow.Show();
-
-        // Initialize polling / auto-start (async)
+        // Initialize polling / auto-start (async) — always runs regardless of window visibility
         _ = _viewModel.InitializeAsync();
 
         Logger.Info("Application startup complete");
@@ -95,6 +104,14 @@ public partial class App : System.Windows.Application
     private void ShutdownApplication()
     {
         Logger.Info("Application shutting down");
+
+        // Allow the main window to close without being intercepted
+        if (_mainWindow != null)
+        {
+            _mainWindow.AllowClose();
+            _mainWindow.Close();
+        }
+
         _viewModel?.StopPolling();
         _trayIconService?.Dispose();
         _mutex?.Dispose();

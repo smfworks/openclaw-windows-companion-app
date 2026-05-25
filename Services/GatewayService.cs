@@ -7,14 +7,13 @@ namespace OpenClawCompanion.Services;
 
 public class GatewayService
 {
-    private static readonly HttpClient HttpClient = new()
-    {
-        Timeout = TimeSpan.FromSeconds(5),
-        BaseAddress = new Uri("http://localhost:18789")
-    };
+    private readonly HttpClient _httpClient;
 
     private readonly string _nodePath = @"C:\Program Files\nodejs\node.exe";
     private readonly string _gatewayPath = @"C:\Users\Michael Gannotti\AppData\Roaming\npm\node_modules\openclaw\openclaw.mjs";
+
+    private string _gatewayHost = "localhost";
+    private int _gatewayPort = 18789;
 
     private int? _gatewayPid;
     private DateTime? _startTime;
@@ -26,11 +25,28 @@ public class GatewayService
     public int? GatewayPid => _gatewayPid;
     public DateTime? StartTime => _startTime;
 
+    public GatewayService()
+    {
+        _httpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(5)
+        };
+        UpdateEndpoint("localhost", 18789);
+    }
+
+    public void UpdateEndpoint(string host, int port)
+    {
+        _gatewayHost = host;
+        _gatewayPort = port;
+        _httpClient.BaseAddress = new Uri($"http://{_gatewayHost}:{_gatewayPort}");
+        Logger.Info($"Gateway endpoint updated to {_gatewayHost}:{_gatewayPort}");
+    }
+
     public async Task<GatewayStatus> GetStatusAsync()
     {
         try
         {
-            var response = await HttpClient.GetAsync("/status");
+            var response = await _httpClient.GetAsync("/status");
             return response.IsSuccessStatusCode ? GatewayStatus.Running : GatewayStatus.Stopped;
         }
         catch
@@ -49,7 +65,7 @@ public class GatewayService
             return false;
         }
 
-        var psi = new ProcessStartInfo(_nodePath, $"\"{_gatewayPath}\" gateway run --force --port 18789")
+        var psi = new ProcessStartInfo(_nodePath, $"\"{_gatewayPath}\" gateway run --force --port {_gatewayPort}")
         {
             CreateNoWindow = true,
             WindowStyle = ProcessWindowStyle.Hidden,
