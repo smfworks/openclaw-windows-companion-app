@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using OpenClawCompanion.Models;
 
 namespace OpenClawCompanion.Services;
@@ -9,10 +10,31 @@ public class CliService
     private readonly Queue<string> _commandHistory = new();
     private const int MaxHistory = 10;
 
-    private readonly string _nodePath = @"C:\Program Files\nodejs\node.exe";
-    private readonly string _openclawPath = @"C:\Users\Michael Gannotti\AppData\Roaming\npm\node_modules\openclaw\openclaw.mjs";
+    // Resolved via discovery (portable, no hardcoded paths). Prefers persisted last-good.
+    private string _nodePath = "node";
+    private string _openclawPath = string.Empty;
 
     public ObservableCollection<CliCommandOutput> History { get; } = new();
+
+    public CliService()
+    {
+        // Mirror discovery from GatewayService for consistent portable CLI behavior
+        try
+        {
+            var settings = new SettingsService().Load();
+            var discoveredNode = DiagnosticsService.DiscoverNodeExecutable(settings.NodeExePath);
+            var discoveredScript = DiagnosticsService.DiscoverOpenClawScript(settings.OpenClawMjsPath);
+            _nodePath = discoveredNode ?? "node";
+            _openclawPath = discoveredScript ?? string.Empty;
+            Logger.Info($"CliService paths resolved — node: {_nodePath}, openclaw.mjs: {(string.IsNullOrEmpty(_openclawPath) ? "(not found)" : _openclawPath)}");
+        }
+        catch (Exception ex)
+        {
+            _nodePath = "node";
+            _openclawPath = string.Empty;
+            Logger.Warn($"Path discovery in CliService ctor failed (PATH fallback): {ex.Message}");
+        }
+    }
 
     public async Task<CliCommandOutput> ExecuteAsync(string command)
     {
@@ -20,10 +42,32 @@ public class CliService
 
         try
         {
-            // Build arguments: gateway {command}
-            var arguments = $"\"{_openclawPath}\" gateway {command}";
+            // Resolve effective paths each execution (re-discover if needed for robustness)
+            string effectiveNode = string.IsNullOrEmpty(_nodePath) ? "node" : _nodePath;
+            string effectiveScript = _openclawPath;
+            if (string.IsNullOrEmpty(effectiveScript) || !File.Exists(effectiveScript))
+            {
+                effectiveScript = DiagnosticsService.DiscoverOpenClawScript() ?? string.Empty;
+                if (!string.IsNullOrEmpty(effectiveScript)) _openclawPath = effectiveScript;
+            }
+            if (string.IsNullOrEmpty(effectiveScript))
+            {
+                output.Error = "OpenClaw script not found (discovery failed). Install via 'npm install -g openclaw'.";
+                output.ExitCode = -1;
+                AddToHistory(output);
+                Logger.Error("CLI aborted: openclaw.mjs path unknown");
+                return output;
+            }
+            if (effectiveNode != "node" && !File.Exists(effectiveNode))
+            {
+                effectiveNode = DiagnosticsService.DiscoverNodeExecutable() ?? "node";
+                if (effectiveNode != "node") _nodePath = effectiveNode;
+            }
 
-            var psi = new ProcessStartInfo(_nodePath, arguments)
+            // Build arguments: gateway {command}
+            var arguments = $"\"{effectiveScript}\" gateway {command}";
+
+            var psi = new ProcessStartInfo(effectiveNode, arguments)
             {
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden,
