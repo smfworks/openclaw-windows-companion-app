@@ -14,21 +14,20 @@ A native Windows system tray application for managing the OpenClaw gateway proce
 - **Single instance** — Mutex-enforced, prevents multiple app instances
 - **Dark theme** — Modern WPF dark UI
 
-### Phase 2 — Settings & Configuration 🔲
+### Phase 2 — Settings & Configuration ✅
 - **Settings panel** — Configure gateway host, port, poll interval
-- **Auto-start with Windows** — Registry Run key or Task Scheduler integration
+- **Auto-start with Windows** — Registry Run key integration
 - **Minimize to tray on startup** — Start hidden in system tray
 - **Close-to-tray behavior** — X button minimizes instead of quitting
 - **Settings persistence** — Save/load preferences to JSON config
-- **JSON config editing** — Edit `openclaw.json` directly from the app
+- **JSON config editing** — Edit `openclaw.json` directly from the app (read-only viewer + edit mode with backup)
 
-### Phase 3 — Advanced Features 🔲
+### Phase 3 — Advanced Features ✅
 - **QR code pairing** — Generate QR codes for mobile node pairing
-- **Build CLI integration** — Run OpenClaw CLI commands from the app
+- **CLI integration** — Run OpenClaw CLI commands from the app
 - **Auto-restart on crash** — Detect gateway failure and automatically restart
 - **PATH diagnostics** — Check Node.js, OpenClaw PATH configuration
-- **Gateway log tail** — Stream gateway's own log files
-- **Update check** — Check for new OpenClaw releases
+- **Update check** — Check for new OpenClaw releases from GitHub
 
 ## Tech Stack
 
