@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 using OpenClawCompanion.Services;
 using OpenClawCompanion.ViewModels;
 
@@ -28,5 +29,24 @@ public partial class MainWindow : Window
             Hide();
             Logger.Info("Window hidden to tray (close prevented)");
         }
+    }
+
+    protected override void OnContentRendered(EventArgs e)
+    {
+        base.OnContentRendered(e);
+
+        if (DataContext is MainViewModel vm)
+        {
+            vm.ShowQRCodeRequested += OnShowQRCodeRequested;
+        }
+    }
+
+    private void OnShowQRCodeRequested(BitmapImage qrImage, string pairingUrl)
+    {
+        var qrWindow = new QRCodeWindow(qrImage, pairingUrl)
+        {
+            Owner = this
+        };
+        qrWindow.ShowDialog();
     }
 }

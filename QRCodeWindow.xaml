@@ -1,0 +1,108 @@
+<Window x:Class="OpenClawCompanion.QRCodeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="QR Code Pairing"
+        Width="340"
+        Height="460"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="Transparent"
+        AllowsTransparency="True"
+        WindowStyle="None"
+        Icon="{x:Null}">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0"
+                      GlassFrameThickness="0"
+                      ResizeBorderThickness="0"
+                      CornerRadius="12"
+                      NonClientFrameEdges="None"/>
+    </WindowChrome.WindowChrome>
+
+    <Border Background="{StaticResource SurfaceBrush}"
+            CornerRadius="12"
+            BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1"
+            MouseDown="OnBorderMouseDown">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Title -->
+            <TextBlock Grid.Row="0"
+                       Text="QR Code Pairing"
+                       FontSize="18"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource AccentBrush}"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,16"/>
+
+            <!-- Instructions -->
+            <TextBlock Grid.Row="1"
+                       Text="Scan this QR code with your phone to pair with the OpenClaw gateway."
+                       FontSize="12"
+                       Foreground="{StaticResource ForegroundDimBrush}"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"
+                       Margin="0,0,0,16"/>
+
+            <!-- QR Image -->
+            <Border Grid.Row="2"
+                    Background="White"
+                    CornerRadius="8"
+                    Padding="16"
+                    HorizontalAlignment="Center">
+                <Image x:Name="QRImage"
+                       Width="240"
+                       Height="240"
+                       Stretch="Uniform"/>
+            </Border>
+
+            <!-- URL Display -->
+            <StackPanel Grid.Row="3"
+                        Orientation="Vertical"
+                        HorizontalAlignment="Center"
+                        Margin="0,12,0,0">
+                <TextBlock x:Name="UrlTextBlock"
+                           FontSize="11"
+                           Foreground="{StaticResource ForegroundBrush}"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"
+                           FontFamily="Consolas"
+                           MaxWidth="280"/>
+            </StackPanel>
+
+            <!-- Buttons -->
+            <StackPanel Grid.Row="4"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Margin="0,16,0,0">
+                <Button Content="Copy URL"
+                        Style="{StaticResource DarkButton}"
+                        Click="OnCopyUrlClick"
+                        Width="100"
+                        Margin="0,0,10,0"/>
+                <Button Content="Close"
+                        Style="{StaticResource RedAccentButton}"
+                        Click="OnCloseClick"
+                        Width="100"/>
+            </StackPanel>
+
+            <!-- Copy feedback -->
+            <TextBlock x:Name="CopyFeedback"
+                       Grid.Row="4"
+                       Text="Copied!"
+                       FontSize="11"
+                       Foreground="{StaticResource GreenBrush}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Top"
+                       Margin="0,-20,0,0"
+                       Visibility="Collapsed"/>
+        </Grid>
+    </Border>
+</Window>

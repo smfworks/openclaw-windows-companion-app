@@ -1,10 +1,13 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Text.Json;
+using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
+using QRCoder;
 using OpenClawCompanion.Models;
 using OpenClawCompanion.Services;
 
@@ -14,6 +17,9 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly GatewayService _gatewayService;
     private readonly SettingsService _settingsService;
+    private readonly CliService _cliService;
+    private readonly DiagnosticsService _diagnosticsService;
+    private readonly UpdateService _updateService;
     private readonly System.Timers.Timer _pollTimer;
     private readonly object _pollLock = new();
 
@@ -62,6 +68,9 @@ public partial class MainViewModel : ObservableObject
     private bool _autoStart;
 
     [ObservableProperty]
+    private bool _autoRestart = true;
+
+    [ObservableProperty]
     private int _pollIntervalSeconds = 10;
 
     [ObservableProperty]
@@ -79,10 +88,49 @@ public partial class MainViewModel : ObservableObject
     private bool _isConfigEditorVisible;
 
     [ObservableProperty]
+    private bool _isConfigEditing;
+
+    [ObservableProperty]
     private string _configJsonText = string.Empty;
 
     [ObservableProperty]
     private string _configFilePath = string.Empty;
+
+    // CLI state
+    [ObservableProperty]
+    private bool _isCliVisible;
+
+    [ObservableProperty]
+    private string _cliCommandInput = string.Empty;
+
+    [ObservableProperty]
+    private string _cliOutputText = string.Empty;
+
+    [ObservableProperty]
+    private bool _isCliExecuting;
+
+    private int _cliHistoryIndex = -1;
+    private string _cliSavedInput = string.Empty;
+
+    // Diagnostics state
+    [ObservableProperty]
+    private bool _isDiagnosticsVisible;
+
+    [ObservableProperty]
+    private bool _isDiagnosticsRunning;
+
+    [ObservableProperty]
+    private string _diagnosticsStatusText = string.Empty;
+
+    // Update check state
+    [ObservableProperty]
+    private bool _isUpdateCheckRunning;
+
+    [ObservableProperty]
+    private UpdateInfo? _updateInfo;
+
+    [ObservableProperty]
+    private string _updateStatusText = string.Empty;
 
     // Editable settings (separate from live settings until saved)
     [ObservableProperty]
@@ -98,20 +146,30 @@ public partial class MainViewModel : ObservableObject
     private bool _settingsAutoStart;
 
     [ObservableProperty]
+    private bool _settingsAutoRestart = true;
+
+    [ObservableProperty]
     private bool _settingsStartMinimized = true;
 
     [ObservableProperty]
     private bool _settingsStartWithWindows;
 
     public ObservableCollection<string> LogEntries { get; } = new();
+    public ObservableCollection<CliCommandOutput> CliHistory { get; }
+    public ObservableCollection<DiagnosticsCheck> DiagnosticsResults { get; } = new();
 
     public event Action<GatewayStatus>? StatusChanged;
     public event Action? ShowWindowRequested;
+    public event Action<BitmapImage, string>? ShowQRCodeRequested;
 
     public MainViewModel(GatewayService gatewayService, SettingsService settingsService)
     {
         _gatewayService = gatewayService;
         _settingsService = settingsService;
+        _cliService = new CliService();
+        _diagnosticsService = new DiagnosticsService();
+        _updateService = new UpdateService();
+        CliHistory = _cliService.History;
 
         // Load persisted settings
         LoadSettings();
@@ -128,6 +186,7 @@ public partial class MainViewModel : ObservableObject
         GatewayPort = settings.GatewayPort.ToString();
         PollIntervalSeconds = settings.PollIntervalSeconds;
         AutoStart = settings.AutoStartGateway;
+        AutoRestart = settings.AutoRestartGateway;
         StartMinimized = settings.StartMinimized;
         StartWithWindows = settings.StartWithWindows;
 
@@ -136,6 +195,7 @@ public partial class MainViewModel : ObservableObject
         SettingsGatewayPort = GatewayPort;
         SettingsPollIntervalSeconds = PollIntervalSeconds;
         SettingsAutoStart = AutoStart;
+        SettingsAutoRestart = AutoRestart;
         SettingsStartMinimized = StartMinimized;
         SettingsStartWithWindows = StartWithWindows;
     }
@@ -148,6 +208,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             GatewayStatus = GatewayStatus.Starting;
+            IsStarting = true;
             UpdateStatusDisplay();
             AppendLog("Starting gateway...");
             Logger.Info("Start command issued");
@@ -157,6 +218,7 @@ public partial class MainViewModel : ObservableObject
             {
                 GatewayStatus = GatewayStatus.Running;
                 IsRunning = true;
+                IsStarting = false;
                 AppendLog("Gateway started successfully");
                 NotificationService.Show("OpenClaw Companion", "Gateway started successfully");
                 StartPolling();
@@ -164,6 +226,7 @@ public partial class MainViewModel : ObservableObject
             else
             {
                 GatewayStatus = GatewayStatus.Error;
+                IsStarting = false;
                 AppendLog("ERROR: Gateway failed to start");
                 NotificationService.Show("OpenClaw Companion", "Gateway failed to start");
                 Logger.Error("Gateway start failed");
@@ -172,6 +235,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             GatewayStatus = GatewayStatus.Error;
+            IsStarting = false;
             AppendLog($"ERROR: Start exception - {ex.Message}");
             NotificationService.Show("OpenClaw Companion", $"Gateway start error: {ex.Message}");
             Logger.Error($"Start gateway exception: {ex}");
@@ -184,7 +248,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task StopGatewayAsync()
     {
-        if (!IsRunning) return;
+        if (!IsRunning && !IsStarting) return;
 
         try
         {
@@ -197,6 +261,7 @@ public partial class MainViewModel : ObservableObject
             {
                 GatewayStatus = GatewayStatus.Stopped;
                 IsRunning = false;
+                IsStarting = false;
                 ClearProcessInfo();
                 UpdateStatusDisplay();
                 AppendLog("Gateway stopped");
@@ -265,6 +330,7 @@ public partial class MainViewModel : ObservableObject
             SettingsGatewayPort = GatewayPort;
             SettingsPollIntervalSeconds = PollIntervalSeconds;
             SettingsAutoStart = AutoStart;
+            SettingsAutoRestart = AutoRestart;
             SettingsStartMinimized = StartMinimized;
             SettingsStartWithWindows = StartWithWindows;
         }
@@ -291,6 +357,7 @@ public partial class MainViewModel : ObservableObject
         GatewayPort = SettingsGatewayPort;
         PollIntervalSeconds = interval;
         AutoStart = SettingsAutoStart;
+        AutoRestart = SettingsAutoRestart;
         StartMinimized = SettingsStartMinimized;
 
         // Handle StartWithWindows registry change
@@ -307,6 +374,7 @@ public partial class MainViewModel : ObservableObject
             GatewayPort = port,
             PollIntervalSeconds = PollIntervalSeconds,
             AutoStartGateway = AutoStart,
+            AutoRestartGateway = AutoRestart,
             StartMinimized = StartMinimized,
             StartWithWindows = StartWithWindows
         };
@@ -321,8 +389,8 @@ public partial class MainViewModel : ObservableObject
             _pollTimer.Interval = PollIntervalSeconds * 1000;
         }
 
-        AppendLog($"Settings saved — Host: {GatewayHost}, Port: {port}, Poll: {PollIntervalSeconds}s, AutoStart: {AutoStart}, StartMinimized: {StartMinimized}, StartWithWindows: {StartWithWindows}");
-        Logger.Info($"Settings updated: {GatewayHost}:{port}, interval={PollIntervalSeconds}s, autoStart={AutoStart}, startMinimized={StartMinimized}, startWithWindows={StartWithWindows}");
+        AppendLog($"Settings saved — Host: {GatewayHost}, Port: {port}, Poll: {PollIntervalSeconds}s, AutoStart: {AutoStart}, AutoRestart: {AutoRestart}, StartMinimized: {StartMinimized}, StartWithWindows: {StartWithWindows}");
+        Logger.Info($"Settings updated: {GatewayHost}:{port}, interval={PollIntervalSeconds}s, autoStart={AutoStart}, autoRestart={AutoRestart}, startMinimized={StartMinimized}, startWithWindows={StartWithWindows}");
 
         IsSettingsVisible = false;
     }
@@ -364,20 +432,318 @@ public partial class MainViewModel : ObservableObject
                 ConfigJsonText = $"Configuration file not found.{Environment.NewLine}{Environment.NewLine}Expected path:{Environment.NewLine}{configPath}";
             }
 
+            IsConfigEditing = false;
             IsConfigEditorVisible = true;
             IsSettingsVisible = false;
         }
         catch (Exception ex)
         {
             ConfigJsonText = $"Error reading configuration file:{Environment.NewLine}{ex.Message}";
+            IsConfigEditing = false;
             IsConfigEditorVisible = true;
         }
+    }
+
+    [RelayCommand]
+    private void EnableConfigEdit()
+    {
+        IsConfigEditing = true;
+    }
+
+    [RelayCommand]
+    private void SaveConfigEditor()
+    {
+        try
+        {
+            // Validate JSON
+            JsonDocument.Parse(ConfigJsonText);
+        }
+        catch (JsonException ex)
+        {
+            AppendLog($"ERROR: Invalid JSON — {ex.Message}");
+            NotificationService.Show("OpenClaw Companion", "Cannot save: Invalid JSON");
+            return;
+        }
+
+        try
+        {
+            // Create backup
+            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var backupPath = $"{ConfigFilePath}.backup.{timestamp}";
+
+            if (File.Exists(ConfigFilePath))
+            {
+                File.Copy(ConfigFilePath, backupPath, overwrite: false);
+                Logger.Info($"Config backup created: {backupPath}");
+            }
+
+            // Write new config
+            File.WriteAllText(ConfigFilePath, ConfigJsonText);
+            Logger.Info("Config saved successfully");
+
+            AppendLog("Configuration saved successfully");
+            NotificationService.Show("OpenClaw Companion", "Configuration saved");
+            IsConfigEditing = false;
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"ERROR: Failed to save config — {ex.Message}");
+            NotificationService.Show("OpenClaw Companion", $"Config save failed: {ex.Message}");
+            Logger.Error($"Config save failed: {ex}");
+        }
+    }
+
+    [RelayCommand]
+    private void CancelConfigEdit()
+    {
+        // Re-read the file to discard changes
+        try
+        {
+            if (File.Exists(ConfigFilePath))
+            {
+                var json = File.ReadAllText(ConfigFilePath);
+                try
+                {
+                    var doc = JsonDocument.Parse(json);
+                    ConfigJsonText = JsonSerializer.Serialize(doc, new JsonSerializerOptions { WriteIndented = true });
+                }
+                catch
+                {
+                    ConfigJsonText = json;
+                }
+            }
+        }
+        catch { }
+        IsConfigEditing = false;
     }
 
     [RelayCommand]
     private void CloseConfigEditor()
     {
         IsConfigEditorVisible = false;
+        IsConfigEditing = false;
+    }
+
+    [RelayCommand]
+    private void ShowQRCode()
+    {
+        try
+        {
+            if (!IsRunning)
+            {
+                AppendLog("QR Code: Gateway must be running to generate pairing URL");
+                return;
+            }
+
+            var pairingUrl = $"http://{GatewayHost}:{GatewayPort}/pair";
+
+            using var qrGenerator = new QRCodeGenerator();
+            using var qrData = qrGenerator.CreateQrCode(pairingUrl, QRCodeGenerator.ECCLevel.Q);
+            using var qrCode = new PngByteQRCode(qrData);
+            var pngBytes = qrCode.GetGraphic(20);
+
+            using var ms = new MemoryStream(pngBytes);
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.StreamSource = ms;
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.EndInit();
+            bitmap.Freeze();
+
+            ShowQRCodeRequested?.Invoke(bitmap, pairingUrl);
+            Logger.Info($"QR code generated for {pairingUrl}");
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"ERROR: Failed to generate QR code — {ex.Message}");
+            Logger.Error($"QR code generation failed: {ex}");
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleCli()
+    {
+        IsCliVisible = !IsCliVisible;
+        if (IsCliVisible)
+        {
+            IsDiagnosticsVisible = false;
+            IsSettingsVisible = false;
+            IsConfigEditorVisible = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExecuteCliCommandAsync()
+    {
+        if (string.IsNullOrWhiteSpace(CliCommandInput) || IsCliExecuting) return;
+
+        IsCliExecuting = true;
+        var command = CliCommandInput.Trim();
+        AppendLog($"CLI: > {command}");
+
+        try
+        {
+            var result = await _cliService.ExecuteAsync(command);
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"> {command}");
+            if (!string.IsNullOrWhiteSpace(result.Output))
+                sb.AppendLine(result.Output);
+            if (!string.IsNullOrWhiteSpace(result.Error))
+                sb.AppendLine($"[ERROR] {result.Error}");
+            sb.AppendLine($"[exit: {result.ExitCode}]");
+            sb.AppendLine();
+
+            CliOutputText += sb.ToString();
+            AppendLog($"CLI: exit code {result.ExitCode}");
+        }
+        catch (Exception ex)
+        {
+            CliOutputText += $"> {command}\n[ERROR] {ex.Message}\n\n";
+            AppendLog($"ERROR: CLI execution failed — {ex.Message}");
+        }
+
+        CliCommandInput = string.Empty;
+        IsCliExecuting = false;
+        ResetCliHistoryIndex();
+    }
+
+    [RelayCommand]
+    private void CliHistoryUp()
+    {
+        var history = _cliService.GetCommandHistory();
+        if (history.Count == 0) return;
+
+        if (_cliHistoryIndex == -1)
+        {
+            _cliSavedInput = CliCommandInput;
+            _cliHistoryIndex = history.Count - 1;
+        }
+        else if (_cliHistoryIndex > 0)
+        {
+            _cliHistoryIndex--;
+        }
+        else
+        {
+            return;
+        }
+
+        CliCommandInput = history[_cliHistoryIndex];
+    }
+
+    [RelayCommand]
+    private void CliHistoryDown()
+    {
+        var history = _cliService.GetCommandHistory();
+        if (history.Count == 0 || _cliHistoryIndex == -1) return;
+
+        if (_cliHistoryIndex < history.Count - 1)
+        {
+            _cliHistoryIndex++;
+            CliCommandInput = history[_cliHistoryIndex];
+        }
+        else
+        {
+            _cliHistoryIndex = -1;
+            CliCommandInput = _cliSavedInput;
+        }
+    }
+
+    public void ResetCliHistoryIndex()
+    {
+        _cliHistoryIndex = -1;
+        _cliSavedInput = string.Empty;
+    }
+
+    [RelayCommand]
+    private void ClearCliOutput()
+    {
+        CliOutputText = string.Empty;
+        _cliService.ClearHistory();
+        ResetCliHistoryIndex();
+    }
+
+    [RelayCommand]
+    private void ToggleDiagnostics()
+    {
+        IsDiagnosticsVisible = !IsDiagnosticsVisible;
+        if (IsDiagnosticsVisible)
+        {
+            IsCliVisible = false;
+            IsSettingsVisible = false;
+            IsConfigEditorVisible = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RunDiagnosticsAsync()
+    {
+        IsDiagnosticsRunning = true;
+        DiagnosticsResults.Clear();
+        DiagnosticsStatusText = "Running diagnostics...";
+
+        try
+        {
+            if (!int.TryParse(GatewayPort, out var port))
+                port = 18789;
+
+            var results = await _diagnosticsService.RunChecksAsync(GatewayHost, port);
+
+            foreach (var check in results)
+            {
+                DiagnosticsResults.Add(check);
+            }
+
+            var passed = results.Count(r => r.Passed);
+            var total = results.Count;
+            DiagnosticsStatusText = $"{passed}/{total} checks passed";
+            AppendLog($"Diagnostics complete: {passed}/{total} passed");
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsStatusText = $"Diagnostics failed: {ex.Message}";
+            AppendLog($"ERROR: Diagnostics failed — {ex.Message}");
+        }
+
+        IsDiagnosticsRunning = false;
+    }
+
+    [RelayCommand]
+    private async Task CheckForUpdatesAsync()
+    {
+        IsUpdateCheckRunning = true;
+        UpdateStatusText = "Checking for updates...";
+        UpdateInfo = null;
+
+        try
+        {
+            var info = await _updateService.CheckForUpdateAsync();
+            UpdateInfo = info;
+
+            if (!string.IsNullOrEmpty(info.ErrorMessage))
+            {
+                UpdateStatusText = $"Update check failed: {info.ErrorMessage}";
+                AppendLog($"Update check failed: {info.ErrorMessage}");
+            }
+            else if (info.UpdateAvailable)
+            {
+                UpdateStatusText = $"Update available! {info.LocalVersion} → {info.LatestVersion}";
+                AppendLog($"Update available: {info.LocalVersion} → {info.LatestVersion}");
+                NotificationService.Show("OpenClaw Companion", $"Update available: {info.LatestVersion}");
+            }
+            else
+            {
+                UpdateStatusText = $"Up to date (v{info.LocalVersion})";
+                AppendLog($"Up to date: v{info.LocalVersion}");
+            }
+        }
+        catch (Exception ex)
+        {
+            UpdateStatusText = $"Update check failed: {ex.Message}";
+            AppendLog($"ERROR: Update check failed — {ex.Message}");
+        }
+
+        IsUpdateCheckRunning = false;
     }
 
     private void UpdateWindowsStartupRegistry(bool enabled)
@@ -454,8 +820,11 @@ public partial class MainViewModel : ObservableObject
             var dispatcher = System.Windows.Application.Current?.Dispatcher;
             if (dispatcher == null) return;
 
+            // Track if auto-restart is needed
+            bool needsAutoRestart = false;
+
             // Ensure we are on the UI thread for property updates
-            dispatcher.Invoke(() =>
+            await dispatcher.InvokeAsync(() =>
             {
                 if (status == GatewayStatus.Running)
                 {
@@ -464,6 +833,7 @@ public partial class MainViewModel : ObservableObject
                     {
                         GatewayStatus = GatewayStatus.Running;
                         IsRunning = true;
+                        IsStarting = false;
                         UpdateProcessInfo();
                         Logger.Info("Poll: Gateway is running");
                         UpdateStatusDisplay();
@@ -482,6 +852,7 @@ public partial class MainViewModel : ObservableObject
                         var previousStatus = GatewayStatus;
                         GatewayStatus = GatewayStatus.Stopped;
                         IsRunning = false;
+                        IsStarting = false;
                         ClearProcessInfo();
                         UpdateStatusDisplay();
                         StatusChanged?.Invoke(GatewayStatus);
@@ -491,6 +862,12 @@ public partial class MainViewModel : ObservableObject
                             AppendLog("WARNING: Gateway stopped unexpectedly");
                             NotificationService.Show("OpenClaw Companion", "Gateway stopped unexpectedly");
                             Logger.Warn("Gateway stopped unexpectedly (detected via poll)");
+
+                            // Flag auto-restart if enabled
+                            if (AutoRestart)
+                            {
+                                needsAutoRestart = true;
+                            }
                         }
                     }
                     else if (_consecutiveDownCount < ConsecutiveDownThreshold)
@@ -499,6 +876,25 @@ public partial class MainViewModel : ObservableObject
                     }
                 }
             });
+
+            // Auto-restart outside of UI thread dispatcher
+            if (needsAutoRestart)
+            {
+                _gatewayService.ResetRestartAttempts();
+                var result = await _gatewayService.AutoRestartIfNeededAsync(AutoRestart);
+                if (result.Attempted && result.Success)
+                {
+                    await dispatcher.InvokeAsync(() =>
+                    {
+                        GatewayStatus = GatewayStatus.Running;
+                        IsRunning = true;
+                        UpdateProcessInfo();
+                        UpdateStatusDisplay();
+                        StatusChanged?.Invoke(GatewayStatus);
+                        StartPolling();
+                    });
+                }
+            }
         }
         catch (Exception ex)
         {

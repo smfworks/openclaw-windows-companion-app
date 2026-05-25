@@ -6,6 +6,7 @@ public class AppSettings
     public int GatewayPort { get; set; } = 18789;
     public int PollIntervalSeconds { get; set; } = 10;
     public bool AutoStartGateway { get; set; } = false;
+    public bool AutoRestartGateway { get; set; } = true;
     public bool StartMinimized { get; set; } = true;
     public bool StartWithWindows { get; set; } = false;
 }
