@@ -13,11 +13,15 @@ public class GatewayService
         BaseAddress = new Uri("http://localhost:18789")
     };
 
-    private readonly string _nodePath = @"C:\Program Files\nodejs\node.exe";
+    private readonly string _nodePath = @"C:\Program Files\node.exe";
     private readonly string _gatewayPath = @"C:\Users\Michael Gannotti\AppData\Roaming\npm\node_modules\openclaw\openclaw.mjs";
 
     private int? _gatewayPid;
     private DateTime? _startTime;
+
+    // CPU tracking fields
+    private DateTime _lastCpuSampleTime = DateTime.MinValue;
+    private TimeSpan _lastTotalProcessorTime = TimeSpan.Zero;
 
     public int? GatewayPid => _gatewayPid;
     public DateTime? StartTime => _startTime;
@@ -63,6 +67,9 @@ public class GatewayService
 
         _gatewayPid = process.Id;
         _startTime = DateTime.Now;
+        // Reset CPU tracking on new process
+        _lastCpuSampleTime = DateTime.MinValue;
+        _lastTotalProcessorTime = TimeSpan.Zero;
         Logger.Info($"Node process started with PID {process.Id}");
 
         // Fire-and-forget read stdout/stderr to avoid buffer deadlock
@@ -98,6 +105,17 @@ public class GatewayService
     {
         Logger.Info("Stopping gateway...");
 
+        // Check if gateway is actually running before attempting stop
+        if (await GetStatusAsync() != GatewayStatus.Running)
+        {
+            Logger.Warn("Gateway is not running, nothing to stop");
+            _gatewayPid = null;
+            _startTime = null;
+            _lastCpuSampleTime = DateTime.MinValue;
+            _lastTotalProcessorTime = TimeSpan.Zero;
+            return true;
+        }
+
         await FindAndKillOpenClawProcessAsync();
 
         // Wait up to 5 seconds for confirmation
@@ -108,6 +126,8 @@ public class GatewayService
             {
                 _gatewayPid = null;
                 _startTime = null;
+                _lastCpuSampleTime = DateTime.MinValue;
+                _lastTotalProcessorTime = TimeSpan.Zero;
                 Logger.Info("Gateway stopped successfully");
                 return true;
             }
@@ -122,7 +142,7 @@ public class GatewayService
         try
         {
             var searcher = new ManagementObjectSearcher(
-                "SELECT ProcessId, CommandLine FROM Win32_Process WHERE Name='node.exe' AND CommandLine LIKE '%openclaw%'");
+                "SELECT ProcessId, CommandLine FROM Win32_Process WHERE Name=''node.exe'' AND CommandLine LIKE ''%openclaw%''");
 
             foreach (ManagementObject obj in searcher.Get())
             {
@@ -159,18 +179,32 @@ public class GatewayService
                 : "???";
 
             double memoryMB = Math.Round(process.WorkingSet64 / (1024.0 * 1024.0), 1);
-            double cpuPercent = 0;
 
+            // CPU calculation using TotalProcessorTime delta
+            double cpuPercent = 0;
             try
             {
-                // Approximate CPU via total processor time delta
-                using var cpuCounter = new PerformanceCounter("Process", "% Processor Time", process.ProcessName, true);
-                cpuCounter.NextValue();
-                Thread.Sleep(100);
-                cpuPercent = Math.Round(cpuCounter.NextValue() / Environment.ProcessorCount, 1);
-                cpuCounter.Dispose();
+                process.Refresh();
+                var now = DateTime.Now;
+                var currentTotalProcessorTime = process.TotalProcessorTime;
+
+                if (_lastCpuSampleTime != DateTime.MinValue && _lastTotalProcessorTime != TimeSpan.Zero)
+                {
+                    var cpuUsedMs = (currentTotalProcessorTime - _lastTotalProcessorTime).TotalMilliseconds;
+                    var elapsedMs = (now - _lastCpuSampleTime).TotalMilliseconds;
+                    if (elapsedMs > 0)
+                    {
+                        cpuPercent = Math.Round((cpuUsedMs / elapsedMs) * 100.0 / Environment.ProcessorCount, 1);
+                    }
+                }
+
+                _lastCpuSampleTime = now;
+                _lastTotalProcessorTime = currentTotalProcessorTime;
             }
-            catch { /* CPU counter may not be available */ }
+            catch
+            {
+                cpuPercent = 0;
+            }
 
             return new ProcessInfo
             {
@@ -183,6 +217,8 @@ public class GatewayService
         catch
         {
             _gatewayPid = null;
+            _lastCpuSampleTime = DateTime.MinValue;
+            _lastTotalProcessorTime = TimeSpan.Zero;
             return null;
         }
     }

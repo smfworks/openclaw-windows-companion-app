@@ -72,10 +72,12 @@ public class TrayIconService : IDisposable
     {
         if (_startItem != null) _startItem.Enabled = !isRunning;
         if (_stopItem != null) _stopItem.Enabled = isRunning;
+        if (_restartItem != null) _restartItem.Enabled = isRunning;
     }
 
     private void OnTrayIconClick(object? sender, MouseEventArgs e)
     {
+        if (_notifyIcon == null) return;
         if (e.Button == MouseButtons.Left)
         {
             ToggleVisibility();

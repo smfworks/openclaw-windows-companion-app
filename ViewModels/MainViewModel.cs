@@ -76,26 +76,36 @@ public partial class MainViewModel : ObservableObject
     {
         if (IsRunning || IsStarting) return;
 
-        GatewayStatus = GatewayStatus.Starting;
-        UpdateStatusDisplay();
-        AppendLog("Starting gateway...");
-        Logger.Info("Start command issued");
-
-        var success = await _gatewayService.StartAsync();
-        if (success)
+        try
         {
-            GatewayStatus = GatewayStatus.Running;
-            IsRunning = true;
-            AppendLog("Gateway started successfully");
-            NotificationService.Show("OpenClaw Companion", "Gateway started successfully");
-            StartPolling();
+            GatewayStatus = GatewayStatus.Starting;
+            UpdateStatusDisplay();
+            AppendLog("Starting gateway...");
+            Logger.Info("Start command issued");
+
+            var success = await _gatewayService.StartAsync();
+            if (success)
+            {
+                GatewayStatus = GatewayStatus.Running;
+                IsRunning = true;
+                AppendLog("Gateway started successfully");
+                NotificationService.Show("OpenClaw Companion", "Gateway started successfully");
+                StartPolling();
+            }
+            else
+            {
+                GatewayStatus = GatewayStatus.Error;
+                AppendLog("ERROR: Gateway failed to start");
+                NotificationService.Show("OpenClaw Companion", "Gateway failed to start");
+                Logger.Error("Gateway start failed");
+            }
         }
-        else
+        catch (Exception ex)
         {
             GatewayStatus = GatewayStatus.Error;
-            AppendLog("ERROR: Gateway failed to start");
-            NotificationService.Show("OpenClaw Companion", "Gateway failed to start");
-            Logger.Error("Gateway start failed");
+            AppendLog($"ERROR: Start exception - {ex.Message}");
+            NotificationService.Show("OpenClaw Companion", $"Gateway start error: {ex.Message}");
+            Logger.Error($"Start gateway exception: {ex}");
         }
 
         UpdateStatusDisplay();
@@ -107,29 +117,57 @@ public partial class MainViewModel : ObservableObject
     {
         if (!IsRunning) return;
 
-        AppendLog("Stopping gateway...");
-        Logger.Info("Stop command issued");
+        try
+        {
+            AppendLog("Stopping gateway...");
+            Logger.Info("Stop command issued");
 
-        await _gatewayService.StopAsync();
-        StopPolling();
-        GatewayStatus = GatewayStatus.Stopped;
-        IsRunning = false;
-        ClearProcessInfo();
-        UpdateStatusDisplay();
-        AppendLog("Gateway stopped");
-        NotificationService.Show("OpenClaw Companion", "Gateway stopped");
+            await _gatewayService.StopAsync();
+            StopPolling();
+            GatewayStatus = GatewayStatus.Stopped;
+            IsRunning = false;
+            ClearProcessInfo();
+            UpdateStatusDisplay();
+            AppendLog("Gateway stopped");
+            NotificationService.Show("OpenClaw Companion", "Gateway stopped");
+        }
+        catch (Exception ex)
+        {
+            GatewayStatus = GatewayStatus.Error;
+            AppendLog($"ERROR: Stop exception - {ex.Message}");
+            NotificationService.Show("OpenClaw Companion", $"Gateway stop error: {ex.Message}");
+            Logger.Error($"Stop gateway exception: {ex}");
+        }
+
         StatusChanged?.Invoke(GatewayStatus);
     }
 
     [RelayCommand]
     private async Task RestartGatewayAsync()
     {
-        AppendLog("Restarting gateway...");
-        Logger.Info("Restart command issued");
+        try
+        {
+            AppendLog("Restarting gateway...");
+            Logger.Info("Restart command issued");
 
-        await StopGatewayAsync();
-        await Task.Delay(1000);
-        await StartGatewayAsync();
+            await StopGatewayAsync();
+
+            // Poll port for up to 5 seconds waiting for gateway to be fully stopped
+            for (int i = 0; i < 10; i++)
+            {
+                await Task.Delay(500);
+                if (!IsRunning)
+                    break;
+            }
+
+            await StartGatewayAsync();
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"ERROR: Restart exception - {ex.Message}");
+            NotificationService.Show("OpenClaw Companion", $"Gateway restart error: {ex.Message}");
+            Logger.Error($"Restart gateway exception: {ex}");
+        }
     }
 
     [RelayCommand]
@@ -172,7 +210,7 @@ public partial class MainViewModel : ObservableObject
         {
             var status = await _gatewayService.GetStatusAsync();
 
-            // Ensure we're on the UI thread for property updates
+            // Ensure we are on the UI thread for property updates
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             {
                 if (status != GatewayStatus)
@@ -289,6 +327,7 @@ public partial class MainViewModel : ObservableObject
             UpdateStatusDisplay();
             AppendLog("Gateway detected as running");
             StartPolling();
+            StatusChanged?.Invoke(GatewayStatus);
         }
         else if (AutoStart)
         {
@@ -299,6 +338,7 @@ public partial class MainViewModel : ObservableObject
         {
             GatewayStatus = GatewayStatus.Stopped;
             UpdateStatusDisplay();
+            StatusChanged?.Invoke(GatewayStatus);
         }
     }
 }
