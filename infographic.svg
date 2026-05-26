@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <!-- Gradients -->
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1a0a2e"/>
+      <stop offset="50%" stop-color="#0d0221"/>
+      <stop offset="100%" stop-color="#05010f"/>
+    </radialGradient>
+    
+    <linearGradient id="hubGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff00ff"/>
+      <stop offset="50%" stop-color="#00ffff"/>
+      <stop offset="100%" stop-color="#0080ff"/>
+    </linearGradient>
+    
+    <linearGradient id="spokeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff00ff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#00ffff" stop-opacity="0.4"/>
+    </linearGradient>
+    
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="strongGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="textGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="url(#bgGrad)"/>
+  
+  <!-- Grid pattern -->
+  <g stroke="#00ffff" stroke-opacity="0.05" stroke-width="1">
+    <line x1="0" y1="108" x2="1920" y2="108"/>
+    <line x1="0" y1="216" x2="1920" y2="216"/>
+    <line x1="0" y1="324" x2="1920" y2="324"/>
+    <line x1="0" y1="432" x2="1920" y2="432"/>
+    <line x1="0" y1="540" x2="1920" y2="540"/>
+    <line x1="0" y1="648" x2="1920" y2="648"/>
+    <line x1="0" y1="756" x2="1920" y2="756"/>
+    <line x1="0" y1="864" x2="1920" y2="864"/>
+    <line x1="0" y1="972" x2="1920" y2="972"/>
+    <line x1="192" y1="0" x2="192" y2="1080"/>
+    <line x1="384" y1="0" x2="384" y2="1080"/>
+    <line x1="576" y1="0" x2="576" y2="1080"/>
+    <line x1="768" y1="0" x2="768" y2="1080"/>
+    <line x1="960" y1="0" x2="960" y2="1080"/>
+    <line x1="1152" y1="0" x2="1152" y2="1080"/>
+    <line x1="1344" y1="0" x2="1344" y2="1080"/>
+    <line x1="1536" y1="0" x2="1536" y2="1080"/>
+    <line x1="1728" y1="0" x2="1728" y2="1080"/>
+  </g>
+  
+  <!-- Circuit pattern decorations -->
+  <g stroke="#ff00ff" stroke-opacity="0.1" stroke-width="1" fill="none">
+    <path d="M 100 100 L 150 100 L 150 150 L 200 150"/>
+    <path d="M 1800 100 L 1750 100 L 1750 150 L 1700 150"/>
+    <path d="M 100 980 L 150 980 L 150 930 L 200 930"/>
+    <path d="M 1800 980 L 1750 980 L 1750 930 L 1700 930"/>
+    <circle cx="150" cy="100" r="3" fill="#ff00ff" fill-opacity="0.3"/>
+    <circle cx="1750" cy="100" r="3" fill="#ff00ff" fill-opacity="0.3"/>
+    <circle cx="150" cy="980" r="3" fill="#00ffff" fill-opacity="0.3"/>
+    <circle cx="1750" cy="980" r="3" fill="#00ffff" fill-opacity="0.3"/>
+  </g>
+  
+  <!-- Title -->
+  <text x="960" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#00ffff" filter="url(#textGlow)">OPENC LAW ECOSYSTEM</text>
+  <text x="960" y="95" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#ff00ff" filter="url(#textGlow)">SMF Works Project — Complete System Architecture</text>
+  
+  <!-- Central Hub -->
+  <g transform="translate(960, 540)">
+    <!-- Outer glow ring -->
+    <circle cx="0" cy="0" r="140" fill="none" stroke="#ff00ff" stroke-width="3" stroke-opacity="0.3" filter="url(#strongGlow)"/>
+    <circle cx="0" cy="0" r="130" fill="none" stroke="#00ffff" stroke-width="2" stroke-opacity="0.5" filter="url(#glow)"/>
+    
+    <!-- Main hub circle -->
+    <circle cx="0" cy="0" r="120" fill="#0a0a1a" stroke="url(#hubGrad)" stroke-width="4" filter="url(#glow)"/>
+    
+    <!-- Inner accent -->
+    <circle cx="0" cy="0" r="100" fill="none" stroke="#00ffff" stroke-width="1" stroke-opacity="0.6" stroke-dasharray="10,5"/>
+    
+    <!-- Hub text -->
+    <text x="0" y="-25" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#ffffff" filter="url(#textGlow)">OPENCLAW</text>
+    <text x="0" y="0" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#00ffff" filter="url(#textGlow)">GATEWAY</text>
+    <text x="0" y="25" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#ff00ff">v (latest)</text>
+    <text x="0" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#8888ff">Node.js 24.15.0</text>
+    <text x="0" y="65" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#8888ff">Port 18789</text>
+  </g>
+  
+  <!-- Spoke 1: Team Structure (Top) -->
+  <g>
+    <!-- Spoke line -->
+    <line x1="960" y1="420" x2="960" y2="180" stroke="url(#spokeGrad)" stroke-width="3" filter="url(#glow)"/>
+    <!-- Node -->
+    <rect x="820" y="80" width="280" height="100" rx="15" fill="#0d0221" stroke="#ff00ff" stroke-width="2" filter="url(#glow)"/>
+    <text x="960" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#ff00ff" filter="url(#textGlow)">👥 TEAM STRUCTURE</text>
+    <text x="960" y="125" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">14 Members Total</text>
+    <text x="960" y="142" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#00ffff">1 Human + 5 Executive AI + 7 Extended AI</text>
+    <text x="960" y="158" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#8888ff">Michael Gannotti, Aiona Edge, Pamela, Gabriel...</text>
+  </g>
+  
+  <!-- Spoke 2: Model Stack (Top Right) -->
+  <g>
+    <line x1="1060" y1="460" x2="1420" y2="240" stroke="url(#spokeGrad)" stroke-width="3" filter="url(#glow)"/>
+    <rect x="1340" y="160" width="260" height="100" rx="15" fill="#0d0221" stroke="#00ffff" stroke-width="2" filter="url(#glow)"/>
+    <text x="1470" y="185" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#00ffff" filter="url(#textGlow)">🧠 MODEL STACK</text>
+    <text x="1470" y="205" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">128K Context Window</text>
+    <text x="1470" y="222" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#ff00ff">kimi-k2.6 · deepseek-v4-pro · gemma4</text>
+    <text x="1470" y="238" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#8888ff">Ollama @ localhost:11434</text>
+  </g>
+  
+  <!-- Spoke 3: Plugins (Right) -->
+  <g>
+    <line x1="1080" y1="540" x2="1580" y2="540" stroke="url(#spokeGrad)" stroke-width="3" filter="url(#glow)"/>
+    <rect x="1600" y="460" width="280" height="160" rx="15" fill="#0d0221" stroke="#ff00ff" stroke-width="2" filter="url(#glow)"/>
+    <text x="1740" y="485" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#ff00ff" filter="url(#textGlow)">🔌 ACTIVE PLUGINS (10+)</text>
+    <text x="1740" y="508" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#00ffff">memory-core · memory-wiki · obsidian</text>
+    <text x="1740" y="524" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#00ffff">msteams · win-tts · win-notify</text>
+    <text x="1740" y="540" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#ffffff">coding-agent · github · gh-issues</text>
+    <text x="1740" y="556" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#ffffff">canvas · win-screenshot · win-ocr</text>
+    <text x="1740" y="572" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#8888ff">win-files · win-clipboard · win-scheduler</text>
+    <text x="1740" y="588" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#8888ff">win-sysinfo · win-ui-auto · win-browser</text>
+  </g>
+  
+  <!-- Spoke 4: Security (Bottom Right) -->
+  <g>
+    <line x1="1060" y1="620" x2="1420" y2="840" stroke="url(#spokeGrad)" stroke-width="3" filter="url(#glow)"/>
+    <rect x="1340" y="820" width="260" height="100" rx="15" fill="#0d0221" stroke="#00ffff" stroke-width="2" filter="url(#glow)"/>
+    <text x="1470" y="845" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#00ffff" filter="url(#textGlow)">🔒 SECURITY</text>
+    <text x="1470" y="865" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">Token Auth + Sandboxing</text>
+    <text x="1470" y="882" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#ff00ff">Secrets via env/keychain/file</text>
+    <text x="1470" y="898" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#8888ff">Privacy First — Ask Before External</text>
+  </g>
+  
+  <!-- Spoke 5: Skills (Bottom) -->
+  <g>
+    <line x1="960" y1="660" x2="960" y2="900" stroke="url(#spokeGrad)" stroke-width="3" filter="url(#glow)"/>
+    <rect x="820" y="900" width="280" height="100" rx="15" fill="#0d0221" stroke="#ff00ff" stroke-width="2" filter="url(#glow)"/>
+    <text x="960" y="925" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#ff00ff" filter="url(#textGlow)">📚 SKILLS SYSTEM (8)</text>
+    <text x="960" y="945" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">6 Precedence Levels</text>
+    <text x="960" y="962" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#00ffff">clawpatch · webwright · health-records · med-pdf</text>
+    <text x="960" y="978" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#8888ff">epic-note · memory-diff · myhealth-pulse · baoyu-infographic</text>
+  </g>
+  
+  <!-- Spoke 6: Context (Bottom Left) -->
+  <g>
+    <line x1="860" y1="620" x2="500" y2="840" stroke="url(#spokeGrad)" stroke-width="3" filter="url(#glow)"/>
+    <rect x="320" y="820" width="260" height="100" rx="15" fill="#0d0221" stroke="#00ffff" stroke-width="2" filter="url(#glow)"/>
+    <text x="450" y="845" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#00ffff" filter="url(#textGlow)">📝 CONTEXT MGMT</text>
+    <text x="450" y="865" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">128K Window · Budget Split</text>
+    <text x="450" y="882" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#ff00ff">continuation-skip · Compaction</text>
+    <text x="450" y="898" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#8888ff">Per-subsystem limits</text>
+  </g>
+  
+  <!-- Spoke 7: Companion App (Left) -->
+  <g>
+    <line x1="840" y1="540" x2="340" y2="540" stroke="url(#spokeGrad)" stroke-width="3" filter="url(#glow)"/>
+    <rect x="40" y="460" width="280" height="160" rx="15" fill="#0d0221" stroke="#ff00ff" stroke-width="2" filter="url(#glow)"/>
+    <text x="180" y="485" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#ff00ff" filter="url(#textGlow)">💻 COMPANION APP</text>
+    <text x="180" y="508" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">WPF .NET 8 · System Tray</text>
+    <text x="180" y="528" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#00ffff">3 Phases Complete ✅</text>
+    <text x="180" y="548" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#00ffff">Core · Settings · Advanced</text>
+    <text x="180" y="568" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#ffffff">179MB Self-Contained</text>
+    <text x="180" y="588" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#8888ff">smfworks/openclaw-windows-companion-app</text>
+  </g>
+  
+  <!-- Spoke 8: Dev Tools (Top Left) -->
+  <g>
+    <line x1="860" y1="460" x2="500" y2="240" stroke="url(#spokeGrad)" stroke-width="3" filter="url(#glow)"/>
+    <rect x="320" y="160" width="260" height="100" rx="15" fill="#0d0221" stroke="#00ffff" stroke-width="2" filter="url(#glow)"/>
+    <text x="450" y="185" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#00ffff" filter="url(#textGlow)">🛠️ DEV TOOLS</text>
+    <text x="450" y="205" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">Aider + Ollama (Primary)</text>
+    <text x="450" y="222" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#ff00ff">Webwright · GitHub CLI · Obsidian</text>
+    <text x="450" y="238" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#8888ff">PowerShell · JeffVault Knowledge Base</text>
+  </g>
+  
+  <!-- Spoke 9: Health (Upper Left, between top and left) -->
+  <g>
+    <line x1="880" y1="470" x2="620" y2="350" stroke="url(#spokeGrad)" stroke-width="2" stroke-opacity="0.6" filter="url(#glow)"/>
+    <rect x="500" y="270" width="220" height="90" rx="12" fill="#0d0221" stroke="#00ff88" stroke-width="2" filter="url(#glow)"/>
+    <text x="610" y="295" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#00ff88" filter="url(#textGlow)">🏥 HEALTH SYSTEMS</text>
+    <text x="610" y="315" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#ffffff">SMART on FHIR · Epic MyChart</text>
+    <text x="610" y="330" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#00ffff">Medical PDF · Health Diff · Pulse</text>
+    <text x="610" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#8888ff">Provider: Elena Hart, ND</text>
+  </g>
+  
+  <!-- Connection dots on spokes -->
+  <circle cx="960" cy="180" r="6" fill="#ff00ff" filter="url(#glow)"/>
+  <circle cx="1420" cy="240" r="6" fill="#00ffff" filter="url(#glow)"/>
+  <circle cx="1580" cy="540" r="6" fill="#ff00ff" filter="url(#glow)"/>
+  <circle cx="1420" cy="840" r="6" fill="#00ffff" filter="url(#glow)"/>
+  <circle cx="960" cy="900" r="6" fill="#ff00ff" filter="url(#glow)"/>
+  <circle cx="500" cy="840" r="6" fill="#00ffff" filter="url(#glow)"/>
+  <circle cx="340" cy="540" r="6" fill="#ff00ff" filter="url(#glow)"/>
+  <circle cx="500" cy="240" r="6" fill="#00ffff" filter="url(#glow)"/>
+  <circle cx="620" cy="350" r="5" fill="#00ff88" filter="url(#glow)"/>
+  
+  <!-- Stats bar at bottom -->
+  <rect x="200" y="1020" width="1520" height="45" rx="8" fill="#0d0221" stroke="#00ffff" stroke-width="1" stroke-opacity="0.5"/>
+  <g font-family="Arial, sans-serif" font-size="12" fill="#ffffff">
+    <text x="280" y="1048" text-anchor="middle"><tspan fill="#ff00ff" font-weight="bold">14</tspan> Team Members</text>
+    <text x="480" y="1048" text-anchor="middle"><tspan fill="#00ffff" font-weight="bold">128K</tspan> Context</text>
+    <text x="680" y="1048" text-anchor="middle"><tspan fill="#ff00ff" font-weight="bold">10+</tspan> Plugins</text>
+    <text x="880" y="1048" text-anchor="middle"><tspan fill="#00ffff" font-weight="bold">8</tspan> Skills</text>
+    <text x="1080" y="1048" text-anchor="middle"><tspan fill="#ff00ff" font-weight="bold">3</tspan> App Phases</text>
+    <text x="1280" y="1048" text-anchor="middle"><tspan fill="#00ffff" font-weight="bold">179</tspan> MB App</text>
+    <text x="1480" y="1048" text-anchor="middle"><tspan fill="#ff00ff" font-weight="bold">3h</tspan> Heartbeat</text>
+    <text x="1680" y="1048" text-anchor="middle"><tspan fill="#00ffff" font-weight="bold">Pittsboro</tspan> NC</text>
+  </g>
+  
+  <!-- Corner decorations -->
+  <g stroke="#ff00ff" stroke-opacity="0.3" stroke-width="2" fill="none">
+    <path d="M 20 20 L 60 20 L 60 40"/>
+    <path d="M 1900 20 L 1860 20 L 1860 40"/>
+    <path d="M 20 1060 L 60 1060 L 60 1040"/>
+    <path d="M 1900 1060 L 1860 1060 L 1860 1040"/>
+  </g>
+</svg>
