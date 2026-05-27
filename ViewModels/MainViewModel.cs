@@ -88,17 +88,33 @@ public partial class MainViewModel : ObservableObject
     private bool _isSettingsVisible;
 
     // Config editor state
-    [ObservableProperty]
     private bool _isConfigEditorVisible;
+    public bool IsConfigEditorVisible
+    {
+        get => _isConfigEditorVisible;
+        set => SetProperty(ref _isConfigEditorVisible, value);
+    }
 
-    [ObservableProperty]
     private bool _isConfigEditing;
+    public bool IsConfigEditing
+    {
+        get => _isConfigEditing;
+        set => SetProperty(ref _isConfigEditing, value);
+    }
 
-    [ObservableProperty]
     private string _configJsonText = string.Empty;
+    public string ConfigJsonText
+    {
+        get => _configJsonText;
+        set => SetProperty(ref _configJsonText, value);
+    }
 
-    [ObservableProperty]
     private string _configFilePath = string.Empty;
+    public string ConfigFilePath
+    {
+        get => _configFilePath;
+        set => SetProperty(ref _configFilePath, value);
+    }
 
     // CLI state
     [ObservableProperty]
@@ -990,26 +1006,34 @@ public partial class MainViewModel : ObservableObject
 
         // Check actual gateway status at startup
         var status = await _gatewayService.GetStatusAsync();
-        if (status == GatewayStatus.Running)
+        
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher == null) return;
+        
+        await dispatcher.InvokeAsync(() =>
         {
-            GatewayStatus = GatewayStatus.Running;
-            IsRunning = true;
-            UpdateProcessInfo();
-            UpdateStatusDisplay();
-            AppendLog("Gateway detected as running");
-            StartPolling();
-            StatusChanged?.Invoke(GatewayStatus);
-        }
-        else if (AutoStart)
-        {
-            AppendLog("Auto-start is enabled, starting gateway...");
-            await StartGatewayAsync();
-        }
-        else
-        {
-            GatewayStatus = GatewayStatus.Stopped;
-            UpdateStatusDisplay();
-            StatusChanged?.Invoke(GatewayStatus);
-        }
+            if (status == GatewayStatus.Running)
+            {
+                GatewayStatus = GatewayStatus.Running;
+                IsRunning = true;
+                UpdateProcessInfo();
+                UpdateStatusDisplay();
+                AppendLog("Gateway detected as running");
+                StartPolling();
+                StatusChanged?.Invoke(GatewayStatus);
+            }
+            else if (AutoStart)
+            {
+                AppendLog("Auto-start is enabled, starting gateway...");
+                // Fire-and-forget; StartGatewayAsync will handle its own dispatcher usage
+                _ = StartGatewayAsync();
+            }
+            else
+            {
+                GatewayStatus = GatewayStatus.Stopped;
+                UpdateStatusDisplay();
+                StatusChanged?.Invoke(GatewayStatus);
+            }
+        });
     }
 }

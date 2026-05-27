@@ -49,4 +49,19 @@ public partial class MainWindow : Window
         };
         qrWindow.ShowDialog();
     }
+
+    private void EditConfigButton_Click(object sender, RoutedEventArgs e)
+    {
+        Logger.Info("EditConfigButton_Click fired!");
+        if (DataContext is MainViewModel vm)
+        {
+            Logger.Info($"Before: IsConfigEditing = {vm.IsConfigEditing}");
+            vm.IsConfigEditing = true;
+            Logger.Info($"After: IsConfigEditing = {vm.IsConfigEditing}");
+        }
+        else
+        {
+            Logger.Info("ERROR: DataContext is not MainViewModel");
+        }
+    }
 }
