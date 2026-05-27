@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:OpenClawCompanion.ViewModels"
+        xmlns:converters="clr-namespace:OpenClawCompanion.Converters"
         Title="OpenClaw Companion"
         Width="680"
         Height="720"
@@ -316,8 +317,9 @@
                 <!-- Config Editor Buttons -->
                 <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,8">
                     <Button Content="Edit"
+                            x:Name="EditConfigButton"
                             Style="{StaticResource DarkButton}"
-                            Command="{Binding EnableConfigEditCommand}"
+                            Click="EditConfigButton_Click"
                             Visibility="{Binding IsConfigEditing, Converter={StaticResource BoolInvertConverter}}"
                             Width="80" Margin="0,0,10,0"/>
                     <Button Content="Save"
