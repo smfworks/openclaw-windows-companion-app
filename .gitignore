@@ -3,3 +3,21 @@ obj/
 *.user
 *.suo
 .vs/
+
+# OpenClaw workspace identity and personal memory files
+AGENTS.md
+SOUL.md
+MEMORY.md
+USER.md
+IDENTITY.md
+TOOLS.md
+HEARTBEAT.md
+DREAMS.md
+team-memory/
+memory/
+.openclaw/
+.env
+.aider.conf.yml
+.clawhub/
+.med-pdf-cache/
+.memory-diff-cache/
